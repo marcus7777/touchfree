@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="/node_modules/@mediapipe/camera_utils/camera_utils.js"></script>
+  <script src="/node_modules/@mediapipe/control_utils/control_utils.js"></script>
+  <script src="/node_modules/@mediapipe/drawing_utils/drawing_utils.js"></script>
+  <script src="/node_modules/@mediapipe/hands/hands.js"></script>
+  <style>
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+    .abs {
+      position: absolute;
+    }
+    body {
+      bottom: 0;
+      font-family: 'Titillium Web', sans-serif;
+      color: white;
+      left: 0;
+      margin: 0;
+      position: absolute;
+      right: 0;
+      top: 0;
+      transform-origin: 0px 0px;
+      overflow: hidden;
+    }
+    .inputs video {
+      left: -1000px;
+    }
+    .container {
+       position: absolute;
+       background-color: #596e73;
+       width: 100%;
+       max-height: 100%;
+     }   
+     .input_video {
+       display: none;
+       position: absolute;
+       top: 0;
+       left: 0;
+       right: 0;
+       bottom: 0;
+     }
+     .input_video.selfie {
+       transform: scale(-1, 1);
+     }
+     .input_image {
+       position: absolute;
+     }
+     .canvas-container {
+       display: flex;
+       height: 100%;
+       width: 100%;
+       justify-content: center;
+       align-items: center;
+     }    
+     .output_canvas {
+       max-width: 100%;
+       display: block;
+       position: relative;
+       left: 0;
+       top: 0;
+     }   
+     .control-panel {
+       position: absolute;
+       left: 0px;
+       top: 0px;
+     }
+     .loading {
+       display: flex;
+       position: absolute;
+       top: 0;
+       right: 0;
+       bottom: 0;
+       left: 0;
+       align-items: center;
+       backface-visibility: hidden;
+       justify-content: center;
+       opacity: 1;
+       transition: opacity 1s;
+     }
+     .loading .message {
+       font-size: x-large;
+     }
+     .loading .spinner {
+       position: absolute;
+       width: 120px;
+       height: 120px;
+       animation: spin 1s linear infinite;
+       border: 32px solid #bebebe;
+       border-top: 32px solid #3498db;
+       border-radius: 50%;
+     }
+     .loaded .loading {
+       opacity: 0;
+     }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <video class="input_video" style="display:none"></video>
+    <div class="canvas-container">
+      <canvas class="output_canvas" width="1280px" height="720px">
+    </div>
+    <div class="loading">
+      <div class="spinner"></div>
+      <div class="message"> Loading </div>
+    </div>
+  </div>
+  <div class="control-panel"></div>
+</body>
+<script type="module">
+let timer = 0;
+let inTimeout = false;
+
+// Our input frames will come from here.
+const videoElement = document.getElementsByClassName("input_video")[0]
+const canvasElement = document.getElementsByClassName("output_canvas")[0]
+const controlsElement = document.getElementsByClassName("control-panel")[0]
+const canvasCtx = canvasElement.getContext("2d")
+
+// Optimization: Turn off animated spinner after its hiding animation is done.
+const spinner = document.querySelector(".loading")
+spinner.ontransitionend = () => {
+  spinner.style.display = "none"
+}
+
+function onResults(results) {
+  // Hide the spinner.
+  document.body.classList.add("loaded")
+
+  // Draw the overlays.
+  canvasCtx.save();
+  canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height)
+  canvasCtx.drawImage( results.image, 0, 0, canvasElement.width, canvasElement.height)
+  if (results.multiHandLandmarks && results.multiHandedness) {
+    for (let index = 0; index < results.multiHandLandmarks.length; index++) {
+      const classification = results.multiHandedness[index]
+      const isRightHand = classification.label === "Right"
+      const landmarks = results.multiHandLandmarks[index]
+      let lms = results.multiHandLandmarks[index]
+      let xs = lms.map((lm) => +lm.y).sort()
+      let highist = xs.sort()[0]
+      if (lms.map((lm) => +lm.y).indexOf(highist) === 8) {
+        let baseToIndex = lms.map((lm) => +lm.y)[0] - highist
+        let baseToLong = lms.map((lm) => +lm.y)[0] - lms.map((lm) => +lm.y)[12]
+        if (baseToLong / baseToIndex < 0.7) {
+          clearTimeout(timer);
+          if (!inTimeout) console.log("press", new Date())
+          inTimeout = true
+          timer = setTimeout(() => {
+            inTimeout = false
+          }, 5000)
+        }
+      }
+
+      drawLandmarks(canvasCtx, landmarks, {
+        color: isRightHand ? "#00FF00" : "#FF0000",
+        fillColor: isRightHand ? "#FF0000" : "#00FF00",
+        radius: (x) => {
+          return lerp(x.from.z, -0.15, 0.1, 10, 1)
+        }
+      })
+    }
+  }
+  canvasCtx.restore()
+}
+
+const hands = new Hands()
+hands.onResults(onResults)
+
+// Present a control panel through which the user can manipulate the solution
+// options.
+new ControlPanel(controlsElement, {
+  selfieMode: true,
+  maxNumHands: 4,
+  minDetectionConfidence: 0.7,
+  minTrackingConfidence: 0.5
+}).add([
+  new SourcePicker({
+    onSourceChanged: () => {
+      hands.reset();
+    },
+    onFrame: async (input, size) => {
+      const aspect = size.height / size.width;
+      let width = 100, height = 100;
+      if (window.innerWidth > window.innerHeight) {
+        height = window.innerHeight;
+        width = height / aspect;
+      } else {
+        width = window.innerWidth;
+        height = width * aspect;
+      }
+      canvasElement.width = width;
+      canvasElement.height = height;
+      await hands.send({ image: input });
+    },
+    examples: {
+      videos: [],
+      images: [],
+    }
+  })
+]).on((options) => {
+  videoElement.classList.toggle("selfie", options.selfieMode)
+  hands.setOptions(options)
+})
+</script>
+</html>
+
