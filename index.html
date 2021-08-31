@@ -118,7 +118,6 @@
   <div class="control-panel"></div>
 </body>
 <script type="module">
-let timer = 0;
 let inTimeout = false;
 
 // Our input frames will come from here.
@@ -133,9 +132,15 @@ spinner.ontransitionend = () => {
   spinner.style.display = "none"
 }
 
+let timer = setTimeout(() => {
+  location.reload()
+}, 30000)
+
 function onResults(results) {
   // Hide the spinner.
   document.body.classList.add("loaded")
+ 
+  clearTimeout(timer);
 
   // Draw the overlays.
   canvasCtx.save();
