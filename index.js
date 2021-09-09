@@ -1,19 +1,13 @@
-const Raspi = require('raspi-io').RaspiIO;
-const five = require('johnny-five');
-const board = new five.Board({
-  io: new Rawspi()
+const exec = require('child_process').exec;
+const express = require('express')
+const app = express()
+const port = 3000
+
+app.get('/', (req, res) => {
+  res.send('Hello World!')
+  exec('sh ~/press.sh', function (error, stdout, stderr) {})
 })
 
-board.on('ready', () => {
-
-var five = require("johnny-five");
-var board = new five.Board();
-
-board.on("ready", function() {
-  var relay = new five.Relay(26)
-  
-  relay.on()
-  setTimeout(() => {
-    relay.off()
-  }, 500)
+app.listen(port, () => {
+  console.log(`Example app listening at http://localhost:${port}`)
 })
