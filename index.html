@@ -161,13 +161,12 @@ function onResults(results) {
           clearTimeout(timer);
 	  if (!inTimeout) {
 	    console.log("press", new Date())
-	    fetch('http://localhost:5000/?' new Date())
 	    fetch('http://localhost:3000/?' new Date())
 	  }
           inTimeout = true
           timer = setTimeout(() => {
             inTimeout = false
-          }, 5000)
+          }, 2000)
         }
       }
 
