@@ -159,7 +159,11 @@ function onResults(results) {
         let baseToLong = lms.map((lm) => +lm.y)[0] - lms.map((lm) => +lm.y)[12]
         if (baseToLong / baseToIndex < 0.7) {
           clearTimeout(timer);
-          if (!inTimeout) console.log("press", new Date())
+	  if (!inTimeout) {
+	    console.log("press", new Date())
+	    fetch('http://localhost:5000/?' new Date())
+	    fetch('http://localhost:3000/?' new Date())
+	  }
           inTimeout = true
           timer = setTimeout(() => {
             inTimeout = false
