@@ -152,17 +152,23 @@ function onResults(results) {
       const isRightHand = classification.label === "Right"
       const landmarks = results.multiHandLandmarks[index]
       let lms = results.multiHandLandmarks[index]
-      let xs = lms.map((lm) => +lm.y).sort()
-      let highist = xs.sort()[0]
-      if (lms.map((lm) => +lm.y).indexOf(highist) === 8) {
-        let baseToIndex = lms.map((lm) => +lm.y)[0] - highist
-        let baseToLong = lms.map((lm) => +lm.y)[0] - lms.map((lm) => +lm.y)[12]
-        if (baseToLong / baseToIndex < 0.7) {
+     // let xs = lms.map((lm) => +lm.x)
+      let ys = lms.map((lm) => +lm.y)
+      let highist = Math.min(...ys)
+      let lowist  = Math.max(...ys)
+     // let avgX = (xs.reduce((a, b) => (a + b)) / xs.length)
+     // let avgY = (ys.reduce((a, b) => (a + b)) / ys.length)
+      if (ys.indexOf(highist) === 8 && ys.indexOf(lowist) === 0) {
+        let baseToIndex = lowist - highist
+        let baseToLong = lowist - lms.map((lm) => +lm.y)[12]
+        console.log(baseToLong / baseToIndex)        
+        if (baseToLong / baseToIndex < 0.5) {
+          console.log("0 press", new Date())
           clearTimeout(timer);
-	  if (!inTimeout) {
-	    console.log("press", new Date())
-	    fetch('http://localhost:3000/?' new Date())
-	  }
+          if (!inTimeout) {
+            console.log("1 press", new Date())
+            fetch('http://localhost:8000/')
+          }
           inTimeout = true
           timer = setTimeout(() => {
             inTimeout = false
