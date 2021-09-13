@@ -136,6 +136,23 @@ let timer = setTimeout(() => {
   location.reload()
 }, 30000)
 
+/******************************************\
+ * Calculates the angle ABC (in radians)  *
+ *                                        *
+ * A first point, ex: {x: 0, y: 0}        *
+ * C second point                         *
+ * B center point                         *
+\*****************************************/
+function find_angle(A,B,C) {
+  if (!C) {
+    C = {x:A.x,y:B.y}
+  }
+  let AB = Math.sqrt(Math.pow(B.x-A.x,2)+ Math.pow(B.y-A.y,2));
+  let BC = Math.sqrt(Math.pow(B.x-C.x,2)+ Math.pow(B.y-C.y,2));
+  let AC = Math.sqrt(Math.pow(C.x-A.x,2)+ Math.pow(C.y-A.y,2));
+  return Math.acos((BC*BC+AB*AB-AC*AC)/(2*BC*AB));
+}
+
 function onResults(results) {
   // Hide the spinner.
   document.body.classList.add("loaded")
@@ -152,27 +169,25 @@ function onResults(results) {
       const isRightHand = classification.label === "Right"
       const landmarks = results.multiHandLandmarks[index]
       let lms = results.multiHandLandmarks[index]
-     // let xs = lms.map((lm) => +lm.x)
-      let ys = lms.map((lm) => +lm.y)
+      let xs = lms.map(lm => +lm.x)
+      let ys = lms.map(lm => +lm.y)
+      let zs = lms.map(lm => +lm.z)
       let highist = Math.min(...ys)
       let lowist  = Math.max(...ys)
-     // let avgX = (xs.reduce((a, b) => (a + b)) / xs.length)
-     // let avgY = (ys.reduce((a, b) => (a + b)) / ys.length)
-      if (ys.indexOf(highist) === 8 && ys.indexOf(lowist) === 0) {
+      let avgX = (xs.reduce((a, b) => (a + b)) / xs.length)
+      let avgY = (ys.reduce((a, b) => (a + b)) / ys.length)
+    // let avgZ = (zs.reduce((a, b) => (a + b)) / zs.length)
+      let diffX = Math.abs((avgX - xs[8]) / avgX)
+     // let diffY = Math.abs((avgY - xs[8]) / avgY)
+     // let diffZ = Math.abs((avgZ - xs[8]) / avgZ)
+      let angle = find_angle(lms[8],{x: avgX, y: avgY})
+      console.log(angle)
+      if (ys.indexOf(highist) === 8 && ys.indexOf(lowist) === 0 && diffX < .22 && angle > 1.2 ) {
         let baseToIndex = lowist - highist
-        let baseToLong = lowist - lms.map((lm) => +lm.y)[12]
-        console.log(baseToLong / baseToIndex)        
+        let baseToLong = lowist - ys[12]
         if (baseToLong / baseToIndex < 0.5) {
-          console.log("0 press", new Date())
-          clearTimeout(timer);
-          if (!inTimeout) {
-            console.log("1 press", new Date())
-            fetch('http://localhost:8000/')
-          }
-          inTimeout = true
-          timer = setTimeout(() => {
-            inTimeout = false
-          }, 1500)
+          console.log("1 press", new Date())
+          fetch('http://localhost:3000/')
         }
       }
 
