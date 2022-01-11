@@ -117,9 +117,7 @@
   </div>
   <div class="control-panel">
   </div>
-  <div id="x" > wave </div>
-  <div id="y" > wave </div>
-  <div id="z" > wave </div>
+  <audio controls src="/Hedgehog Grumpy Sounds.mp3" ref="grumpy" />
 </body>
 <script type="module">
 let inTimeout = false
@@ -136,7 +134,7 @@ const spinner = document.querySelector(".loading")
 spinner.ontransitionend = () => {
   spinner.style.display = "none"
 }
-
+let playing = false
 let timer = setTimeout(() => {
   location.reload()
 }, 10000)
@@ -247,8 +245,6 @@ function onResults(results) {
         return true
       }, []).reverse()
 
-      document.getElementById("x").innerText = diffX[4]
-
       if (history[0] && (history[0].highistAvg.r && history[0].highistAvg.l) && (history[0].highistAvg.r.n > 1 && history[0].highistAvg.l.n >1 && history[0].highistAvg.r.v.v == 4 && history[0].highistAvg.l.v.v == 4)) {
         if ((history[0].leftist == 12 && history[0].rightist == 0) || (history[0].leftist == 0 && history[0].rightist == 12)) {
           console.log("Guard", new Date()) 
@@ -289,15 +285,25 @@ function onResults(results) {
         }
       }
       if (history[0] && history[0].highist == 4) {
-	if ((history[0].lowist == 0 || history[0].lowist == 17 || history[0].lowist == 18 || history[0].lowist == 18 || history[0].lowist == 19 || history[0].lowist == 20) && (diffX[4] > .1 && diffX[8] < .1 && diffX[12] < .1 && diffX[16] < .1 && diffX[20] < .1 )) {
+        if ((history[0].lowist == 0 || history[0].lowist == 17 || history[0].lowist == 18 || history[0].lowist == 18 || history[0].lowist == 19 || history[0].lowist == 20) && (diffX[4] > .1 && diffX[8] < .1 && diffX[12] < .1 && diffX[16] < .1 && diffX[20] < .1 )) {
           console.log("thumbs up", new Date())
           history = []
         }
       }
 
       if (history[0] && history[0].lowist == 4) {
-	if ((history[0].highist == 0 || history[0].highist == 17 || history[0].highist == 18 || history[0].highist == 18 || history[0].highist == 19 || history[0].highist == 20) && (diffX[4] > .1 && diffX[8] < .1 && diffX[12] < .1 && diffX[16] < .1 && diffX[20] < .1 )) {
+        if ((history[0].highist == 0 || history[0].highist == 17 || history[0].highist == 18 || history[0].highist == 18 || history[0].highist == 19 || history[0].highist == 20) && (diffX[4] > .1 && diffX[8] < .1 && diffX[12] < .1 && diffX[16] < .1 && diffX[20] < .1 )) {
           console.log("thumbs down", new Date())
+          
+          setTimeout(() => {
+            playing = false
+          }, 5000)
+          
+          if (!playing) {
+            let audio = new Audio('/Hedgehog Grumpy Sounds.mp3')
+            audio.play()
+            playing = true
+          }
           history = []
         }
       }
