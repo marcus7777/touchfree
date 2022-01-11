@@ -115,10 +115,15 @@
       <div class="message"> Loading </div>
     </div>
   </div>
-  <div class="control-panel"></div>
+  <div class="control-panel">
+  </div>
+  <div id="x" > wave </div>
+  <div id="y" > wave </div>
+  <div id="z" > wave </div>
 </body>
 <script type="module">
-let inTimeout = false;
+let inTimeout = false
+const start = Date.now()
 
 // Our input frames will come from here.
 const videoElement = document.getElementsByClassName("input_video")[0]
@@ -134,7 +139,7 @@ spinner.ontransitionend = () => {
 
 let timer = setTimeout(() => {
   location.reload()
-}, 30000)
+}, 10000)
 
 /******************************************\
  * Calculates the angle ABC (in radians)  *
@@ -153,12 +158,14 @@ function find_angle(A,B,C) {
   return Math.acos((BC*BC+AB*AB-AC*AC)/(2*BC*AB));
 }
 
+let history = []
+let historyTimer = 0
+
 function onResults(results) {
   // Hide the spinner.
   document.body.classList.add("loaded")
  
   clearTimeout(timer);
-
   // Draw the overlays.
   canvasCtx.save();
   canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height)
@@ -174,20 +181,124 @@ function onResults(results) {
       let zs = lms.map(lm => +lm.z)
       let highist = Math.min(...ys)
       let lowist  = Math.max(...ys)
+      let leftist = Math.min(...xs)
+      let rightist  = Math.max(...xs)
+      let closest = Math.min(...zs)
+      let furthest  = Math.max(...zs)
       let avgX = (xs.reduce((a, b) => (a + b)) / xs.length)
       let avgY = (ys.reduce((a, b) => (a + b)) / ys.length)
-    // let avgZ = (zs.reduce((a, b) => (a + b)) / zs.length)
-      let diffX = Math.abs((avgX - xs[8]) / avgX)
-     // let diffY = Math.abs((avgY - xs[8]) / avgY)
-     // let diffZ = Math.abs((avgZ - xs[8]) / avgZ)
+      let avgZ = (zs.reduce((a, b) => (a + b)) / zs.length)
+      let diffX = xs.map(x => Math.abs((avgX - x) / avgX))
+      let diffY = ys.map(y => Math.abs((avgY - y) / avgY))
+      let diffZ = zs.map(z => Math.abs((avgZ - z) / avgZ))
       let angle = find_angle(lms[8],{x: avgX, y: avgY})
-      console.log(angle)
-      if (ys.indexOf(highist) === 8 && ys.indexOf(lowist) === 0 && diffX < .22 && angle > 1.2 ) {
+      // L4  4R
+      let palm = isRightHand ? (xs[4] < avgX) : (xs[4] > avgX)
+      let historyLength = history.length
+      let air = (a, v) => { // average with index and handed 
+        a[v.i+v.isRightHand ? "r" : "l"]   = a[v.i+v.isRightHand ? "r" : "l"] ? a[v.i+v.isRightHand ? "r" : "l"] : {v:v}
+        a[v.i+v.isRightHand ? "r" : "l"].n = (a[v.i+v.isRightHand ? "r" : "l"].n || 0) + 1
+        return a
+      }
+
+      /* console.log({minX: Math.min(...xs)})
+      console.log({minY: Math.min(...ys)})
+      console.log({minZ: Math.min(...zs)})
+
+      console.log({maxX: Math.max(...xs)})
+      console.log({maxY: Math.max(...ys)})
+      console.log({maxZ: Math.max(...zs)})
+
+      console.log({maxDiffX: Math.max(...diffX)})
+      console.log({maxDiffY: Math.max(...diffY)})
+      console.log({maxDiffZ: Math.max(...diffZ)}) */
+
+      let time = Date.now() - start
+
+      let flag = false
+      history = [...history.slice(-19), {
+        index, lms, avgX, avgY, avgZ,
+        highist:  ys.indexOf(highist), 
+        lowist:   ys.indexOf(lowist), 
+        leftist:  xs.indexOf(leftist), 
+        rightist: xs.indexOf(rightist), 
+        closest:  zs.indexOf(closest), 
+        furthest: zs.indexOf(furthest),
+        highistAvg: [...history.map(f=>({v:f.highist, i:f.index, isRightHand:f.isRightHand}))].reduce(air, {}),
+        lowistAvg:  [...history.map(f=>({v:f.lowist,  i:f.index, isRightHand:f.isRightHand}))].reduce(air, {}),
+        leftistAvg: [...history.map(f=>({v:f.leftist, i:f.index, isRightHand:f.isRightHand}))].reduce(air, {}),
+        rightistAvg:[...history.map(f=>({v:f.rightist,i:f.index, isRightHand:f.isRightHand}))].reduce(air, {}),
+        closestAvg: [...history.map(f=>({v:f.closest, i:f.index, isRightHand:f.isRightHand}))].reduce(air, {}),
+        furthestAvg:[...history.map(f=>({v:f.furthest,i:f.index, isRightHand:f.isRightHand}))].reduce(air, {}),
+        diffX, diffY, diffZ, 
+        angle,
+        isRightHand,
+        palm,
+        time,
+      }].reverse().filter((v,i) => {
+        if (flag == true) return false
+        let timeDiff = (Date.now() - start) - v.time 
+        if (i == 0) return true
+       // console.log("timeSpliting", i, timeDiff, timeDiff / i  )
+        if (timeDiff > 2000) {
+          flag = true
+          return false
+        }
+        return true
+      }, []).reverse()
+
+      document.getElementById("x").innerText = diffX[4]
+
+      if (history[0] && (history[0].highistAvg.r && history[0].highistAvg.l) && (history[0].highistAvg.r.n > 1 && history[0].highistAvg.l.n >1 && history[0].highistAvg.r.v.v == 4 && history[0].highistAvg.l.v.v == 4)) {
+        if ((history[0].leftist == 12 && history[0].rightist == 0) || (history[0].leftist == 0 && history[0].rightist == 12)) {
+          console.log("Guard", new Date()) 
+          history = []
+        }
+      }
+      if (history[0] && Math.sqrt(Math.pow(lms[8].x - lms[4].x, 2) + Math.pow(lms[8].y - lms[4].y, 2) + Math.pow(lms[8].z - lms[4].z, 2)) < .1 ) {
+        console.log("Pick", new Date()) 
+        history = []
+      }
+      if (history[0] && ys.indexOf(highist) == 0 && ys.indexOf(lowist) == 8 && diffX[8] < .22 && angle > 1.2) {
         let baseToIndex = lowist - highist
         let baseToLong = lowist - ys[12]
         if (baseToLong / baseToIndex < 0.5) {
-          console.log("1 press", new Date())
-          fetch('http://localhost:3000/')
+          console.log("Down", new Date())
+          history = []
+          // fetch('http://localhost:3000/')
+        }
+      }
+      if (history[0] && ys.indexOf(highist) == 8 && ys.indexOf(lowist) == 0 && diffX[8] < .22 && angle > 1.2) {
+        let baseToIndex = lowist - highist
+        let baseToLong = lowist - ys[12]
+        if (baseToLong / baseToIndex < 0.5) {
+          console.log("1 || Press", new Date())
+          // fetch('http://localhost:3000/')
+        }
+      }
+      if (history[0] && (
+        history[0].highist == 20 || 
+        history[0].highist == 16 ||
+        history[0].highist == 12 ||
+        history[0].highist == 8)) {
+        if (history[1] && history[0].lowist == 0 && diffX[8] < .22 && angle > 1.2) {
+          if ((history[1].highist == 20 || history[1].highist == 16 || history[1].highist == 12 || history[1].highist == 8)) {
+            console.log("wave", new Date())
+            history = []
+          }
+        }
+      }
+      if (history[0] && history[0].highist == 4) {
+	if ((history[0].lowist == 0 || history[0].lowist == 17 || history[0].lowist == 18 || history[0].lowist == 18 || history[0].lowist == 19 || history[0].lowist == 20) && (diffX[4] > .1 && diffX[8] < .1 && diffX[12] < .1 && diffX[16] < .1 && diffX[20] < .1 )) {
+          console.log("thumbs up", new Date())
+          history = []
+        }
+      }
+
+      if (history[0] && history[0].lowist == 4) {
+	if ((history[0].highist == 0 || history[0].highist == 17 || history[0].highist == 18 || history[0].highist == 18 || history[0].highist == 19 || history[0].highist == 20) && (diffX[4] > .1 && diffX[8] < .1 && diffX[12] < .1 && diffX[16] < .1 && diffX[20] < .1 )) {
+          console.log("thumbs down", new Date())
+          history = []
         }
       }
 
