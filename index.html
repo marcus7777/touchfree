@@ -115,9 +115,7 @@
       <div class="message"> Loading </div>
     </div>
   </div>
-  <div class="control-panel">
-  </div>
-  <audio controls src="/Hedgehog Grumpy Sounds.mp3" ref="grumpy" />
+  <div class="control-panel"></div>
 </body>
 <script type="module">
 let inTimeout = false
@@ -137,7 +135,7 @@ spinner.ontransitionend = () => {
 let playing = false
 let timer = setTimeout(() => {
   location.reload()
-}, 10000)
+}, 5000)
 
 /******************************************\
  * Calculates the angle ABC (in radians)  *
@@ -157,7 +155,6 @@ function find_angle(A,B,C) {
 }
 
 let history = []
-let historyTimer = 0
 
 function onResults(results) {
   // Hide the spinner.
@@ -252,8 +249,20 @@ function onResults(results) {
         }
       }
       if (history[0] && Math.sqrt(Math.pow(lms[8].x - lms[4].x, 2) + Math.pow(lms[8].y - lms[4].y, 2) + Math.pow(lms[8].z - lms[4].z, 2)) < .1 ) {
-        console.log("Pick", new Date()) 
-        history = []
+        if (history[1] && Math.sqrt(Math.pow(history[1].lms[8].x - history[1].lms[4].x, 2) + Math.pow(history[1].lms[8].y - history[1].lms[4].y, 2) + Math.pow(history[1].lms[8].z - history[1].lms[4].z, 2)) < .1 ) {
+          if (history[2] && Math.sqrt(Math.pow(history[2].lms[8].x - history[2].lms[4].x, 2) + Math.pow(history[2].lms[8].y - history[2].lms[4].y, 2) + Math.pow(history[2].lms[8].z - history[2].lms[4].z, 2)) < .1 ) {
+	    if (history[0].palm && history[1].palm && history[2].palm) { 
+	      if (
+	           (history[0].highist == 20 || history[0].highist == 16 || history[0].highist == 12) && 
+	           (history[1].highist == 20 || history[1].highist == 16 || history[1].highist == 12) &&
+	           (history[2].highist == 20 || history[2].highist == 16 || history[2].highist == 12) 
+	         ) { 
+                console.log("Pick", history[2] ) 
+                history = []
+	      }
+	    }
+	  }
+	}
       }
       if (history[0] && ys.indexOf(highist) == 0 && ys.indexOf(lowist) == 8 && diffX[8] < .22 && angle > 1.2) {
         let baseToIndex = lowist - highist
@@ -332,26 +341,8 @@ new ControlPanel(controlsElement, {
   minTrackingConfidence: 0.5
 }).add([
   new SourcePicker({
-    onSourceChanged: () => {
-      hands.reset();
-    },
-    onFrame: async (input, size) => {
-      const aspect = size.height / size.width;
-      let width = 100, height = 100;
-      if (window.innerWidth > window.innerHeight) {
-        height = window.innerHeight;
-        width = height / aspect;
-      } else {
-        width = window.innerWidth;
-        height = width * aspect;
-      }
-      canvasElement.width = width;
-      canvasElement.height = height;
-      await hands.send({ image: input });
-    },
-    examples: {
-      videos: [],
-      images: [],
+    onFrame: async (input) => {
+      await hands.send({ image: input })
     }
   })
 ]).on((options) => {
